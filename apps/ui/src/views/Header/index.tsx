@@ -1,87 +1,128 @@
-import { MenuOutlined } from '@ant-design/icons';
-import { Col, Dropdown, Menu, Row } from 'antd';
-import React from 'react';
-import styled from 'styled-components';
-import { About } from './About';
-import { NetworkDirectionSelector } from './NetworkDirectionSelector';
-import { ReactComponent as Logo } from './logo.svg';
-import { LinearGradientButton } from 'components/Styled';
-import { ForceBridgeContainer } from 'containers/ForceBridgeContainer';
+import React, { useRef } from 'react';
+import { WalletConnectorButton } from 'components/WalletConnector';
+import {
+  AppBar,
+  Box,
+  Toolbar,
+  IconButton,
+  Typography,
+  Container,
+  Link,
+  Button,
+  ListItem,
+  Grid,
+  MenuList,
+  MenuItem,
+} from '@mui/material';
+import { MenuIcon, SwitchHorizontalIcon } from '@heroicons/react/outline';
+import logo from './logo.png';
+import '../../assets/styles/app-bar.scss';
+import '../../assets/styles/icon-button.scss';
+import { ExpandedMenu } from './components/ExpandedMenu/ExpandedMenu';
+import { CanOpenExpandedMenu } from 'interfaces/Header/OpenExpandedMenu';
+import { menuItems } from 'interfaces/Header/MenuItems';
+import { CustomizedAppBar } from './styled';
+import { CustomizedIconButton } from 'shared-styled/styled';
+import { Link as RouterLink, LinkProps, useHistory, useLocation } from 'react-router-dom';
 
-const AppHeaderWrapper = styled.header`
-  z-index: 1;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.12);
-  padding: 16px 100px;
-  height: 64px;
-  background: ${(props) => props.theme.palette.common.white};
-
-  @media (max-width: 768px) {
-    padding: 16px 24px;
-  }
-`;
+const LinkBehavior = React.forwardRef<HTMLAnchorElement, LinkProps>((props, ref) => (
+  <RouterLink ref={ref} {...props} />
+));
 
 export const AppHeader: React.FC = () => {
-  const {
-    network,
-    direction,
-    switchBridgeDirection,
-    switchNetwork,
-    supportedNetworks,
-  } = ForceBridgeContainer.useContainer();
+  const expandedMenuRef = useRef<CanOpenExpandedMenu>(null);
+  const history = useHistory();
+  const location = useLocation();
 
-  const referenceLinks = (
-    <Menu>
-      <Menu.Item>
-        <a
-          href="https://github.com/nervosnetwork/force-bridge/blob/main/docs/dapp-user-guide.md"
-          target="_blank"
-          rel="noreferrer"
-        >
-          User Guide
-        </a>
-      </Menu.Item>
-      <Menu.Item>
-        <a href="https://github.com/nervosnetwork/force-bridge" target="_blank" rel="noreferrer">
-          GitHub
-        </a>
-      </Menu.Item>
-      <Menu.Item>
-        <About />
-      </Menu.Item>
-    </Menu>
-  );
+  const handleOpenExpandedMenu = () => {
+    return expandedMenuRef.current?.openExpandedMenu();
+  };
+
+  const setParams = (isBridge: string) => {
+    const params = new URLSearchParams(location.search);
+    params.set('isBridge', isBridge);
+    history.replace({ search: params.toString() });
+  };
+
+  const handleMenuItemClick = (index: number) => {
+    switch (index) {
+      case 0:
+        setParams('true');
+        break;
+      case 1:
+        setParams('false');
+        break;
+      case 2:
+        expandedMenuRef.current?.openExpandedMenu();
+        break;
+    }
+  };
 
   return (
-    <AppHeaderWrapper>
-      <Row justify="space-between" align="middle" gutter={16}>
-        <Col md={3} sm={2} xs={2}>
-          <div>
-            <Logo height="32px" width="62px" />
-          </div>
-        </Col>
-        <Col md={18} sm={22} xs={22}>
-          <div style={{ maxWidth: '300px', margin: '0 auto' }}>
-            <NetworkDirectionSelector
-              networks={supportedNetworks}
-              network={network}
-              direction={direction}
-              onSelect={({ network, direction }) => {
-                switchNetwork(network);
-                switchBridgeDirection(direction);
-              }}
-            />
-          </div>
-        </Col>
-        <Col md={3} sm={0} xs={0} style={{ textAlign: 'right' }}>
-          <Dropdown overlay={referenceLinks}>
-            <LinearGradientButton icon={<MenuOutlined />} size="small" />
-          </Dropdown>
-        </Col>
-      </Row>
-    </AppHeaderWrapper>
+    <>
+      <CustomizedAppBar position="fixed" className="app-bar">
+        <Container maxWidth="xl">
+          <Toolbar disableGutters>
+            <img src={logo} />
+            <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
+              <MenuList>
+                {menuItems.map((item, index) => (
+                  <MenuItem onClick={() => handleMenuItemClick(index)}>
+                    {item.icon}
+                    {item.name}
+                  </MenuItem>
+                ))}
+              </MenuList>
+
+              {/* <MenuItem onClick={() => setParams('false')}>
+                <Typography textAlign="center">History</Typography>
+              </MenuItem> */}
+              {/* <Button color="primary" component={LinkBehavior} underline="none" to="asdas">
+                <SwitchHorizontalIcon />
+                <Typography textAlign="center">Transfer</Typography>
+              </Button> */}
+              {/* <Link
+                color="primary"
+                onClick={() => handleOpenExpandedMenu(index)}
+                component={LinkBehavior}
+                underline="none"
+                to={page.path}
+              >
+                {page.icon}
+                <Typography textAlign="center">{page.name}</Typography>
+              </Link>
+              <Link
+                color="primary"
+                onClick={() => handleOpenExpandedMenu(index)}
+                component={LinkBehavior}
+                underline="none"
+                to={page.path}
+              >
+                {page.icon}
+                <Typography textAlign="center">{page.name}</Typography>
+              </Link> */}
+            </Box>
+
+            <Box sx={{ flexGrow: 1 }}>
+              <WalletConnectorButton block type="primary" />
+            </Box>
+
+            <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
+              <CustomizedIconButton
+                size="large"
+                aria-label="account of current user"
+                aria-controls="menu-appbar"
+                aria-haspopup="true"
+                color="inherit"
+                onClick={() => handleOpenExpandedMenu()}
+              >
+                <MenuIcon />
+              </CustomizedIconButton>
+            </Box>
+          </Toolbar>
+        </Container>
+      </CustomizedAppBar>
+      <ExpandedMenu ref={expandedMenuRef} />
+    </>
   );
 };

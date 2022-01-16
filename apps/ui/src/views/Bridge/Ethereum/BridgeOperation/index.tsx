@@ -1,5 +1,5 @@
 import Icon from '@ant-design/icons';
-import { Button, Divider, Row, Spin, Typography } from 'antd';
+import { Divider, Row, Spin } from 'antd';
 import { useFormik } from 'formik';
 import React, { useEffect, useMemo } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -17,6 +17,7 @@ import { AssetSymbol } from 'components/AssetSymbol';
 import { StyledCardWrapper } from 'components/Styled';
 import { UserInput } from 'components/UserInput';
 import { WalletConnectorButton } from 'components/WalletConnector';
+import { Box, Button, MenuItem, Typography } from '@mui/material';
 import { BridgeOperationFormContainer } from 'containers/BridgeOperationFormContainer';
 import { BridgeDirection, ForceBridgeContainer } from 'containers/ForceBridgeContainer';
 import { boom } from 'errors';
@@ -26,33 +27,34 @@ import { useSearchParams } from 'hooks/useSearchParams';
 import { BeautyAmount } from 'libs';
 import { useSelectBridgeAsset } from 'views/Bridge/hooks/useSelectBridgeAsset';
 import { useSendBridgeTransaction } from 'views/Bridge/hooks/useSendBridgeTransaction';
-
-const BridgeViewWrapper = styled(StyledCardWrapper)`
-  .label {
-    font-weight: bold;
-    font-size: 12px;
-    line-height: 14px;
-    color: rgba(0, 0, 0, 0.8);
-  }
-
-  .input-wrapper {
-    padding: 28px 0;
-  }
-`;
-
-const HelpWrapper = styled(Typography.Text)`
-  padding-left: 8px;
-`;
+import { NetworkDirectionSelector } from 'components/NetworkDirectionSelector/NetworkDirectionSelector';
+import forcebridge from '../../../../assets/images/forcebridge-white.png';
+import '../../../../assets/styles/transfer.scss';
+import { CustomizedSelect } from '../../../../components/AssetSelector/styled';
+import { TransferDetails } from 'components/TransferDetails';
+import { ForceBridgeLogo, Transfer } from './styled';
+import { ConnectStatus } from 'interfaces/WalletConnector';
 
 const Help: React.FC<{ validateStatus: 'error' | ''; help?: string }> = ({ validateStatus, help }) => {
   if (validateStatus !== 'error') return null;
-  return <HelpWrapper type="danger">{help}</HelpWrapper>;
+  return (
+    <Typography variant="body2" color="info.main" marginTop={1}>
+      {help}
+    </Typography>
+  );
 };
 
 export const BridgeOperationForm: React.FC = () => {
   useAutoSetBridgeToAmount();
 
-  const { signer, direction, switchBridgeDirection } = ForceBridgeContainer.useContainer();
+  const {
+    signer,
+    network,
+    direction,
+    switchBridgeDirection,
+    switchNetwork,
+    supportedNetworks,
+  } = ForceBridgeContainer.useContainer();
   const query = useAssetQuery();
   const history = useHistory();
   const location = useLocation();
@@ -83,6 +85,9 @@ export const BridgeOperationForm: React.FC = () => {
     setRecipient,
     recipient,
   } = BridgeOperationFormContainer.useContainer();
+
+  const { walletConnectStatus } = ForceBridgeContainer.useContainer();
+  const isConnected = walletConnectStatus === ConnectStatus.Connected;
 
   const allowance = useAllowance(selectedAsset);
   const enableApproveButton = allowance && allowance.status === 'NeedApprove';
@@ -150,37 +155,44 @@ export const BridgeOperationForm: React.FC = () => {
   };
 
   return (
-    <BridgeViewWrapper>
-      <WalletConnectorButton block type="primary" />
+    <>
+      <ForceBridgeLogo src={forcebridge} />
+      <Transfer>
+        <NetworkDirectionSelector
+          networks={supportedNetworks}
+          network={network}
+          direction={direction}
+          onSelect={({ network, direction }) => {
+            switchNetwork(network);
+            switchBridgeDirection(direction);
+          }}
+        />
+        <div className="input-wrapper">
+          <AssetSelector
+            btnProps={{ disabled: query.data == null, loading: query.isLoading }}
+            options={assetList}
+            rowKey={(asset) => asset.identity()}
+            selected={selectedAsset?.identity()}
+            onSelect={(_id, asset) => setSelectedAsset(asset)}
+          />
+        </div>
 
-      <div className="input-wrapper">
         <UserInput
           id="bridgeInInputAmount"
           name="bridgeInInputAmount"
           onBlur={formik.handleBlur}
           value={bridgeFromAmount}
           onChange={(e) => setBridgeFromAmount(e.target.value)}
-          label={
-            <span>
-              <label className="label">From:</label>&nbsp;
-              <AssetSelector
-                btnProps={{ disabled: query.data == null, loading: query.isLoading }}
-                options={assetList}
-                rowKey={(asset) => asset.identity()}
-                selected={selectedAsset?.identity()}
-                onSelect={(_id, asset) => setSelectedAsset(asset)}
-              />
-            </span>
-          }
-          extra={
+          label={'Amount'}
+          error={statusOf('bridgeInInputAmount').validateStatus === 'error'}
+          endAdornment={
             selectedAsset && (
               <Button
-                type="link"
+                variant="contained"
                 size="small"
                 onClick={() => setBridgeFromAmount(BeautyAmount.from(selectedAsset).humanize({ separator: false }))}
               >
-                Max:&nbsp;
-                <HumanizeAmount asset={selectedAsset} />
+                Max
               </Button>
             )
           }
@@ -188,63 +200,31 @@ export const BridgeOperationForm: React.FC = () => {
           disabled={selectedAsset == null || signer == null}
         />
         <Help {...statusOf('bridgeInInputAmount')} />
-      </div>
 
-      <Row justify="center" align="middle">
-        <Icon style={{ fontSize: '24px' }} component={BridgeDirectionIcon} onClick={() => switchBridgeDirection()} />
-      </Row>
+        <Divider dashed style={{ margin: 0, padding: 0 }} />
 
-      <div className="input-wrapper">
-        <UserInput
-          label={
-            <span>
-              <label className="label">To:</label>&nbsp;
-              {selectedAsset && <AssetSymbol info={selectedAsset?.shadow?.info} />}
-            </span>
-          }
-          placeholder="0.0"
-          disabled
-          value={bridgeToAmount}
-          extra={
-            <Button type="link" size="small">
-              {feeQuery.data && (
-                <>
-                  Fee:&nbsp;
-                  <HumanizeAmount asset={feeQuery.data.fee} />
-                </>
-              )}
-              {feeQuery.isLoading && <Spin />}
-            </Button>
-          }
+        <div className="input-wrapper">
+          <UserInput
+            id="recipient"
+            name="recipient"
+            onBlur={formik.handleBlur}
+            label={'To ETH Address'}
+            error={statusOf('recipient').validateStatus === 'error'}
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
+          />
+          <Help {...statusOf('recipient')} />
+        </div>
+
+        {recipient && bridgeFromAmount && <TransferDetails />}
+
+        <SubmitButton
+          disabled={validateStatus !== 'success' && !enableApproveButton && isConnected}
+          onClick={formik.submitForm}
+          allowanceStatus={allowance}
+          isloading={isLoading}
         />
-      </div>
-
-      <Divider dashed style={{ margin: 0, padding: 0 }} />
-
-      <div className="input-wrapper">
-        <UserInput
-          id="recipient"
-          name="recipient"
-          onBlur={formik.handleBlur}
-          label={<span className="label">Recipient:</span>}
-          value={recipient}
-          onChange={(e) => setRecipient(e.target.value)}
-          extra={signer && <RecipientButton setRecipient={setRecipient} signer={signer} direction={direction} />}
-        />
-        <Help {...statusOf('recipient')} />
-      </div>
-
-      <SubmitButton
-        disabled={validateStatus !== 'success' && !enableApproveButton}
-        block
-        type="primary"
-        size="large"
-        onClick={formik.submitForm}
-        allowanceStatus={allowance}
-        isloading={isLoading}
-      />
-
-      <BridgeReminder />
-    </BridgeViewWrapper>
+      </Transfer>
+    </>
   );
 };

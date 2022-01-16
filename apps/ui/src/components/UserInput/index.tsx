@@ -1,33 +1,19 @@
-import { Input, InputProps, Row } from 'antd';
 import React from 'react';
-import styled from 'styled-components';
+import { InputBaseProps, Typography } from '@mui/material';
+import { CustomInput } from './styled';
 
-export interface UserInputProps extends InputProps {
+export interface UserInputProps extends InputBaseProps {
   label?: React.ReactNode;
-  extra?: React.ReactNode;
 }
 
-const UserInputWrapper = styled.div`
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 16px;
-  padding: 16px;
-
-  .ant-input,
-  .ant-input-lg {
-    padding: 8px 0 0;
-    border-radius: 0;
-  }
-`;
-
 export const UserInput: React.FC<UserInputProps> = (props) => {
-  const { label, extra, className, ...inputProps } = props;
+  const { label, ...inputProps } = props;
   return (
-    <UserInputWrapper className={className}>
-      <Row justify="space-between" align="middle">
-        <div>{label}</div>
-        <div>{extra}</div>
-      </Row>
-      <Input bordered={false} autoComplete="off" size="large" {...inputProps} />
-    </UserInputWrapper>
+    <>
+      <Typography color="text.primary" variant="body1" marginTop={3} marginBottom={1}>
+        {label}
+      </Typography>
+      <CustomInput sx={{ ml: 1, flex: 1 }} {...inputProps} />
+    </>
   );
 };

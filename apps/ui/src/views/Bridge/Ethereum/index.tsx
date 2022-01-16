@@ -2,11 +2,14 @@ import PWCore, { CHAIN_SPECS, ChainID, EthProvider, PwCollector } from '@lay2/pw
 import React, { useEffect, useState } from 'react';
 import { BridgeOperationForm } from './BridgeOperation';
 import { ChainIdWarning } from './ChainIdWarning';
+import Container from '@mui/material/Container';
 import { EthereumProviderContainer } from 'containers/EthereumProviderContainer';
 import { ForceBridgeContainer } from 'containers/ForceBridgeContainer';
 import { BridgeHistory } from 'views/Bridge/components/BridgeHistory';
 import { useSelectBridgeAsset } from 'views/Bridge/hooks/useSelectBridgeAsset';
 import { ConnectorConfig, EthereumWalletConnector } from 'xchain';
+import { useSearchParams } from 'hooks/useSearchParams';
+import { Footer } from 'components/Footer';
 
 function checkChainId(chainId: number): asserts chainId is ConnectorConfig['ckbChainID'] {
   if (chainId !== 0 && chainId !== 1 && chainId !== 2) {
@@ -62,6 +65,9 @@ const EthereumBridge: React.FC = () => {
     };
   }, [api, setWallet]);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isBridge = searchParams && searchParams[0] === 'isBridge' && searchParams[1] === 'true';
+
   return (
     <EthereumProviderContainer.Provider>
       <ChainIdWarning
@@ -69,17 +75,18 @@ const EthereumBridge: React.FC = () => {
         chainName={process.env.REACT_APP_ETHEREUM_ENABLE_CHAIN_NAME}
       />
       {wallet instanceof EthereumWalletConnector && (
-        <div>
-          <BridgeOperationForm />
-          <div style={{ padding: '8px' }} />
-          {selectedAsset && confirmNumberConfig && (
+        <Container maxWidth="sm">
+          {isBridge && <BridgeOperationForm />}
+
+          {!isBridge && confirmNumberConfig && (
             <BridgeHistory
               asset={selectedAsset}
               xchainConfirmNumber={confirmNumberConfig.xchainConfirmNumber}
               nervosConfirmNumber={confirmNumberConfig.nervosConfirmNumber}
             />
           )}
-        </div>
+          <Footer />
+        </Container>
       )}
     </EthereumProviderContainer.Provider>
   );
